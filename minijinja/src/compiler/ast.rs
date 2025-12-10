@@ -384,11 +384,11 @@ pub struct Return<'a> {
     pub expr: Option<Spanned<Expr<'a>>>,
 }
 
-/// A call block
+/// A do statement - evaluates an expression without outputting
 #[cfg_attr(feature = "internal_debug", derive(Debug))]
 #[cfg_attr(feature = "unstable_machinery_serde", derive(serde::Serialize))]
 pub struct Do<'a> {
-    pub call: Spanned<Call<'a>>,
+    pub expr: Expr<'a>,
 }
 
 /// A "from" import

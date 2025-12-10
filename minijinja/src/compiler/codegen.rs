@@ -488,7 +488,11 @@ impl<'source> CodeGenerator<'source> {
     }
 
     fn compile_do(&mut self, do_tag: &ast::Spanned<ast::Do<'source>>) {
-        self.compile_call(&do_tag.call, None);
+        self.set_line_from_span(do_tag.span());
+        // Compile the expression (e.g., list.append(item))
+        self.compile_expr(&do_tag.expr);
+        // Pop the result since do doesn't output anything
+        self.add(Instruction::DiscardTop);
     }
 
     fn compile_if_stmt(&mut self, if_cond: &ast::Spanned<ast::IfCond<'source>>) {

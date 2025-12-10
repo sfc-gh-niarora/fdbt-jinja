@@ -304,11 +304,7 @@ fn track_walk<'a>(node: &ast::Stmt<'a>, state: &mut AssignmentTracker<'a>) {
             }
         }
         ast::Stmt::Do(stmt) => {
-            tracker_visit_expr(&stmt.call.expr, state);
-            stmt.call
-                .args
-                .iter()
-                .for_each(|x| tracker_visit_callarg(x, state));
+            tracker_visit_expr(&stmt.expr, state);
         }
     }
 }

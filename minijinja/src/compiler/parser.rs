@@ -1235,14 +1235,10 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_do(&mut self) -> Result<ast::Do<'a>, Error> {
-        let call = match ok!(self.parse_expr()) {
-            ast::Expr::Call(call) => call,
-            expr => syntax_error!(
-                "expected call expression in call block, got {}",
-                expr.description()
-            ),
-        };
-        Ok(ast::Do { call })
+        // {% do %} evaluates any expression without outputting
+        // Commonly used for side effects like {% do list.append(item) %}
+        let expr = ok!(self.parse_expr());
+        Ok(ast::Do { expr })
     }
 
     #[cfg(feature = "macros")]
