@@ -9,17 +9,21 @@ use crate::value::{Enumerator, Kwargs, Object, Value};
 use crate::vm::state::State;
 use crate::vm::Vm;
 
-pub(crate) struct Macro {
+/// A macro object that can be invoked from templates
+///
+/// Macros are reusable template fragments that can be called like functions.
+/// They support parameters, default values, and can access the template environment.
+pub struct Macro {
     pub name: Value,
     pub arg_spec: Vec<Value>,
     // because values need to be 'static, we can't hold a reference to the
     // instructions that declared the macro.  Instead of that we place the
     // reference to the macro instruction (and the jump offset) in the
     // state under `state.macros`.
-    pub macro_ref_id: usize,
-    pub state_id: isize,
-    pub closure: Value,
-    pub caller_reference: bool,
+    pub(crate) macro_ref_id: usize,
+    pub(crate) state_id: isize,
+    pub(crate) closure: Value,
+    pub(crate) caller_reference: bool,
 }
 
 impl fmt::Debug for Macro {
@@ -119,14 +123,9 @@ impl Object for Macro {
         let vm = Vm::new(state.env());
         let mut rv = String::new();
 
-        // This requires some explanation here.  Because we get the state as
-        // &State and not &mut State we are required to create a new state in
-        // eval_macro.  This is unfortunate but makes the calling interface more
-        // convenient for the rest of the system.  Because macros cannot return
-        // anything other than strings (most importantly they) can't return
-        // other macros this is however not an issue, as modifications in the
-        // macro cannot leak out.
-        ok!(vm.eval_macro(
+        // Eval the macro - it may return a typed value via {% return value %}
+        // or output a string via normal template rendering
+        let typed_return = ok!(vm.eval_macro(
             state,
             self.macro_ref_id,
             &mut Output::new(&mut rv),
@@ -135,6 +134,13 @@ impl Object for Macro {
             arg_values
         ));
 
+        // If macro used {% return value %}, return that typed value directly
+        // This preserves types (integers, lists, etc.) instead of converting to string
+        if let Some(return_value) = typed_return {
+            return Ok(return_value);
+        }
+
+        // Otherwise return the string output (backward compatible)
         Ok(if !matches!(state.auto_escape(), AutoEscape::None) {
             Value::from_safe_string(rv)
         } else {

@@ -811,6 +811,8 @@ impl<'a> Parser<'a> {
                 }
                 ast::Stmt::Break(respan!(ast::Break))
             }
+            #[cfg(feature = "macros")]
+            "return" => ast::Stmt::Return(respan!(ok!(self.parse_return()))),
             "do" => ast::Stmt::Do(respan!(ok!(self.parse_do()))),
             name => syntax_error!("unknown statement {}", name),
         })
@@ -1241,6 +1243,23 @@ impl<'a> Parser<'a> {
             ),
         };
         Ok(ast::Do { call })
+    }
+
+    #[cfg(feature = "macros")]
+    fn parse_return(&mut self) -> Result<ast::Return<'a>, Error> {
+        // return can optionally have an expression
+        // {% return %} - return nothing
+        // {% return expr %} - return a value
+        let expr = if let Ok(Some((Token::BlockEnd, _))) = self.stream.current() {
+            // At end of block, no expression
+            None
+        } else {
+            // Parse the expression
+            let expr_ast = ok!(self.parse_expr());
+            let span = expr_ast.span();
+            Some(Spanned::new(expr_ast, span))
+        };
+        Ok(ast::Return { expr })
     }
 
     fn subparse(

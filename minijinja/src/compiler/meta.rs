@@ -296,6 +296,13 @@ fn track_walk<'a>(node: &ast::Stmt<'a>, state: &mut AssignmentTracker<'a>) {
         }
         #[cfg(feature = "loop_controls")]
         ast::Stmt::Continue(_) | ast::Stmt::Break(_) => {}
+        #[cfg(feature = "macros")]
+        ast::Stmt::Return(ret) => {
+            // Visit the return expression if present
+            if let Some(ref expr) = ret.expr {
+                tracker_visit_expr(expr, state);
+            }
+        }
         ast::Stmt::Do(stmt) => {
             tracker_visit_expr(&stmt.call.expr, state);
             stmt.call

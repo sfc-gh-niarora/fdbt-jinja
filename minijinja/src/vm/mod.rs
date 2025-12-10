@@ -12,7 +12,7 @@ use crate::error::{Error, ErrorKind};
 use crate::output::{CaptureMode, Output};
 use crate::utils::{untrusted_size_hint, AutoEscape, UndefinedBehavior};
 use crate::value::namespace_object::Namespace;
-use crate::value::{ops, value_map_with_capacity, Kwargs, ObjectRepr, Value, ValueMap};
+use crate::value::{ops, value_map_with_capacity, Kwargs, MutableList, ObjectRepr, Value, ValueMap};
 use crate::vm::context::{Frame, Stack};
 use crate::vm::loop_object::{Loop, LoopState};
 use crate::vm::state::BlockStack;
@@ -24,13 +24,16 @@ pub(crate) use crate::vm::context::Context;
 pub use crate::vm::state::State;
 
 #[cfg(feature = "macros")]
+pub use crate::vm::macro_object::Macro;
+
+#[cfg(feature = "macros")]
 mod closure_object;
 mod context;
 #[cfg(feature = "fuel")]
 mod fuel;
 mod loop_object;
 #[cfg(feature = "macros")]
-mod macro_object;
+pub mod macro_object;
 #[cfg(feature = "multi_template")]
 mod module_object;
 mod state;
@@ -134,6 +137,8 @@ impl<'env> Vm<'env> {
                 macros: state.macros.clone(),
                 #[cfg(feature = "macros")]
                 closure_tracker: state.closure_tracker.clone(),
+                #[cfg(feature = "macros")]
+                return_value: std::cell::RefCell::new(None),
                 #[cfg(feature = "fuel")]
                 fuel_tracker: state.fuel_tracker.clone(),
             },
@@ -396,12 +401,19 @@ impl<'env> Vm<'env> {
                 }
                 Instruction::BuildList(n) => {
                     let count = n.unwrap_or_else(|| stack.pop().try_into().unwrap());
-                    let mut v = Vec::with_capacity(untrusted_size_hint(count));
-                    for _ in 0..count {
-                        v.push(stack.pop());
+                    
+                    // For empty lists, create a MutableList to support .append() and other mutations
+                    // This enables DBT-style templates: {% set items = [] %} {% do items.append(1) %}
+                    if count == 0 {
+                        stack.push(Value::from_object(MutableList::new()))
+                    } else {
+                        let mut v = Vec::with_capacity(untrusted_size_hint(count));
+                        for _ in 0..count {
+                            v.push(stack.pop());
+                        }
+                        v.reverse();
+                        stack.push(Value::from_object(v))
                     }
-                    v.reverse();
-                    stack.push(Value::from_object(v))
                 }
                 Instruction::UnpackList(count) => {
                     ctx_ok!(self.unpack_list(&mut stack, *count));
@@ -687,7 +699,14 @@ impl<'env> Vm<'env> {
                     self.build_macro(&mut stack, state, *offset, name, *flags);
                 }
                 #[cfg(feature = "macros")]
-                Instruction::Return => break,
+                Instruction::Return => {
+                    // If there's a value on the stack, it's the return value
+                    // Pop it and store it in state.return_value for typed returns
+                    if let Some(return_val) = stack.try_pop() {
+                        *state.return_value.borrow_mut() = Some(return_val);
+                    }
+                    break;
+                }
                 #[cfg(feature = "macros")]
                 Instruction::Enclose(name) => {
                     // the first time we enclose a value, we need to create a closure
@@ -711,6 +730,13 @@ impl<'env> Vm<'env> {
                 }
             }
             pc += 1;
+        }
+
+        // Check if a typed return value was set (via {% return value %})
+        // If so, return that instead of popping from stack
+        #[cfg(feature = "macros")]
+        if let Some(return_val) = state.return_value.borrow_mut().take() {
+            return Ok(Some(return_val));
         }
 
         Ok(stack.try_pop())

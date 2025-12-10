@@ -82,6 +82,8 @@ pub enum Stmt<'a> {
     Continue(Spanned<Continue>),
     #[cfg(feature = "loop_controls")]
     Break(Spanned<Break>),
+    #[cfg(feature = "macros")]
+    Return(Spanned<Return<'a>>),
     Do(Spanned<Do<'a>>),
 }
 
@@ -117,6 +119,8 @@ impl fmt::Debug for Stmt<'_> {
             Stmt::Continue(s) => fmt::Debug::fmt(s, f),
             #[cfg(feature = "loop_controls")]
             Stmt::Break(s) => fmt::Debug::fmt(s, f),
+            #[cfg(feature = "macros")]
+            Stmt::Return(s) => fmt::Debug::fmt(s, f),
             Stmt::Do(s) => fmt::Debug::fmt(s, f),
         }
     }
@@ -372,6 +376,14 @@ pub struct Continue;
 #[cfg_attr(feature = "unstable_machinery_serde", derive(serde::Serialize))]
 pub struct Break;
 
+/// Return from a macro
+#[cfg_attr(feature = "internal_debug", derive(Debug))]
+#[cfg(feature = "macros")]
+#[cfg_attr(feature = "unstable_machinery_serde", derive(serde::Serialize))]
+pub struct Return<'a> {
+    pub expr: Option<Spanned<Expr<'a>>>,
+}
+
 /// A call block
 #[cfg_attr(feature = "internal_debug", derive(Debug))]
 #[cfg_attr(feature = "unstable_machinery_serde", derive(serde::Serialize))]
@@ -553,6 +565,12 @@ pub struct List<'a> {
 
 impl List<'_> {
     pub fn as_const(&self) -> Option<Value> {
+        // Don't optimize empty lists to constants - they need to be MutableLists at runtime
+        // for DBT compatibility (e.g., {% set items = [] %} {% do items.append(1) %})
+        if self.items.is_empty() {
+            return None;
+        }
+        
         if !self.items.iter().all(|x| matches!(x, Expr::Const(_))) {
             return None;
         }

@@ -55,6 +55,8 @@ pub struct State<'template, 'env> {
     pub(crate) macros: std::sync::Arc<Vec<(&'template Instructions<'env>, u32)>>,
     #[cfg(feature = "macros")]
     pub(crate) closure_tracker: std::sync::Arc<crate::vm::closure_object::ClosureTracker>,
+    #[cfg(feature = "macros")]
+    pub(crate) return_value: std::cell::RefCell<Option<crate::value::Value>>,
     #[cfg(feature = "fuel")]
     pub(crate) fuel_tracker: Option<std::sync::Arc<FuelTracker>>,
 }
@@ -92,6 +94,8 @@ impl<'template, 'env> State<'template, 'env> {
             macros: Default::default(),
             #[cfg(feature = "macros")]
             closure_tracker: Default::default(),
+            #[cfg(feature = "macros")]
+            return_value: std::cell::RefCell::new(None),
             #[cfg(feature = "fuel")]
             fuel_tracker: ctx.env().fuel().map(FuelTracker::new),
             ctx,

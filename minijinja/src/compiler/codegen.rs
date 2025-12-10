@@ -394,6 +394,19 @@ impl<'source> CodeGenerator<'source> {
                     }
                 }
             }
+            #[cfg(feature = "macros")]
+            ast::Stmt::Return(ret) => {
+                self.set_line_from_span(ret.span());
+                // If there's an expression, compile it and leave it on the stack
+                // The VM will pop it and store it as the return value
+                if let Some(ref expr) = ret.expr {
+                    self.compile_expr(expr);
+                    // DON'T emit - we want to return the typed value, not a string!
+                    // The Return instruction will handle it
+                }
+                // Exit the macro
+                self.add(Instruction::Return);
+            }
             ast::Stmt::Do(do_tag) => {
                 self.compile_do(do_tag);
             }

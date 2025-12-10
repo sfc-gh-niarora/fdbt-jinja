@@ -218,6 +218,8 @@ use crate::vm::State;
 
 pub use crate::value::argtypes::{from_args, ArgType, FunctionArgs, FunctionResult, Kwargs, Rest};
 pub use crate::value::merge_object::merge_maps;
+pub use crate::value::mutable_list::MutableList;
+pub use crate::value::macro_namespace::MacroNamespace;
 pub use crate::value::object::{DynObject, Enumerator, Object, ObjectExt, ObjectRepr};
 
 #[macro_use]
@@ -227,9 +229,11 @@ mod argtypes;
 mod deserialize;
 pub(crate) mod merge_object;
 pub(crate) mod namespace_object;
+pub(crate) mod macro_namespace;
 mod object;
 pub(crate) mod ops;
 mod serialize;
+mod mutable_list;
 
 #[cfg(feature = "deserialization")]
 pub use self::deserialize::ViaDeserialize;
