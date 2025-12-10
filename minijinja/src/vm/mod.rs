@@ -24,6 +24,7 @@ pub(crate) use crate::vm::context::Context;
 pub use crate::vm::state::State;
 
 #[cfg(feature = "macros")]
+#[allow(unused_imports)]
 pub use crate::vm::macro_object::Macro;
 
 #[cfg(feature = "macros")]

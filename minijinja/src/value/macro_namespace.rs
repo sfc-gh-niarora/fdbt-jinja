@@ -88,7 +88,7 @@ impl Object for MacroNamespace {
     fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
         #[cfg(feature = "macros")]
         {
-            let key_str = key.as_str()?;
+            let _key_str = key.as_str()?;
             // Macros are stored as Arc<Macro>, but Value::from_object needs
             // the Macro itself. However, Macro doesn't implement Clone.
             // For now, we don't support direct attribute access to macros.

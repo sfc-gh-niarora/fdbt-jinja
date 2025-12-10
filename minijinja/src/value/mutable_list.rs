@@ -5,7 +5,7 @@
 /// DBT templates that use {% do list.append(item) %} patterns.
 use std::sync::{Arc, Mutex};
 
-use crate::value::{DynObject, Enumerator, Object, ObjectRepr, Value};
+use crate::value::{Enumerator, Object, ObjectRepr, Value};
 use crate::State;
 
 /// A mutable list that can be modified in place via template operations.
@@ -195,11 +195,6 @@ impl Default for MutableList {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// Helper function to check if a Value is a MutableList
-pub fn is_mutable_list(value: &Value) -> bool {
-    value.downcast_object_ref::<MutableList>().is_some()
 }
 
 #[cfg(test)]
