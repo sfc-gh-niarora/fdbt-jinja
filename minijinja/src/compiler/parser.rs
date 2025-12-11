@@ -589,7 +589,9 @@ impl<'a> Parser<'a> {
                                 first_span = Some(var.span());
                             }
                             has_kwargs = true;
-                            args.push(ast::CallArg::Kwarg(var.id, ok!(self.parse_expr_noif())));
+                            // Allow conditional expressions (if...else) in keyword arguments
+                            // This enables patterns like: func(key=val if cond else default)
+                            args.push(ast::CallArg::Kwarg(var.id, ok!(self.parse_expr())));
                         }
                         _ if has_kwargs => {
                             return Err(syntax_error(Cow::Borrowed(
