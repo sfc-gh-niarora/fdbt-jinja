@@ -106,11 +106,13 @@ Result2: {{ test_return(3) }}
     let result = template.render(minijinja::context!{}).unwrap();
     println!("Return test result: {:?}", result);
     
-    // If return exits early, Result1 should have "Before return" and "early exit" but NOT "After return"
-    // Result2 should have both "Before return" and "After return"
-    assert!(result.contains("Result1: Before return"));
-    assert!(result.contains("early exit"));
-    assert!(!result.contains("Result1: Before return\nearly exit\nAfter return"));
+    // The {% return %} statement sets the return value and exits immediately
+    // It does NOT append to previous output - it replaces the entire return value
+    // Result1: x=10, so it hits return and outputs only "early exit"
+    // Result2: x=3, so it doesn't hit return and outputs "Before return\nAfter return"
+    assert!(result.contains("Result1: early exit"));
+    assert!(!result.contains("Result1: Before return"));
+    assert!(result.contains("Result2: Before return"));
     assert!(result.contains("Result2: Before return\n\nAfter return"));
 }
 
